@@ -162,8 +162,26 @@ app.post("api/v1/brain/share", (req, res) => {
 
 })
 
-app.get("api/v1/brain/:shareLink", (req, res) => {
+app.get("api/v1/brain/:shareLink", async (req, res) => {
+     const shareLink = req.params.shareLink;
 
+    try {
+       
+        const content = await contentModel.findOne({ shareLink: shareLink }).populate('userId', 'username');
+
+        if (!content) {
+            return res.status(404).json({ message: "Content not found or the link is invalid." });
+        }
+
+       
+        res.json({
+            content
+        });
+
+    } catch (error) {
+        console.error("Error fetching shared content:", error);
+        res.status(500).json({ message: "An internal server error occurred." });
+    }
 })
 
 app.listen(3000);
