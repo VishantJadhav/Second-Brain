@@ -158,8 +158,46 @@ app.delete("/api/v1/content/:id", UserMiddleware, async (req, res) => {
 
 })
 
-app.post("api/v1/brain/share", (req, res) => {
+app.post("api/v1/brain/share", async (req, res) => {
+    //@ts-ignore
+     const contentId = req.params.id;
+     //@ts-ignore
+    const userId = req.userId;
 
+    try {
+        // First, verify that the content exists and belongs to the user
+        const content = await contentModel.findOne({ _id: contentId, userId: userId });
+
+        if (!content) {
+            return res.status(404).json({ message: "Content not found or you don't have permission to share it." });
+        }
+
+        // If a share link already exists, just return that one
+        if (content.shareLink) {
+            return res.json({
+                message: "Share link already exists.",
+                shareUrl: `http://localhost:3000/api/v1/brain/${content.shareLink}`
+            });
+        }
+
+        // Generate a new, unique, URL-friendly ID
+        const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10);
+        const newShareLink = nanoid();
+
+        // Save the new share link to the document
+        content.shareLink = newShareLink;
+        await content.save();
+
+        // Return the full shareable URL to the user
+        res.status(201).json({
+            message: "Share link created successfully.",
+            shareUrl: `http://localhost:3000/api/v1/brain/${newShareLink}`
+        });
+
+    } catch (error) {
+        console.error("Error creating share link:", error);
+        res.status(500).json({ message: "An internal server error occurred." });
+    }
 })
 
 app.get("api/v1/brain/:shareLink", async (req, res) => {
